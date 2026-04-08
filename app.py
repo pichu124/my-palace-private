@@ -11,6 +11,7 @@ Commands:
     delete <id>             Delete a memory by ID
     stats                   Show palace statistics
     export [wing] [room]    Export memories to JSON
+    ask <question>          Ask a question using RAG (retrieves context, queries Claude)
 """
 
 import argparse
@@ -372,6 +373,97 @@ def cmd_export(args):
     print(f"Exported {len(all_entries)} entries to {output}")
 
 
+def palace_ask(question, wing=None, room=None, n_context=6, model="claude-sonnet-4-20250514"):
+    """Query ChromaDB for relevant context and ask Claude via RAG.
+
+    Reusable — can be imported by web.py or other modules.
+    Requires ANTHROPIC_API_KEY to be set in the environment.
+    """
+    import anthropic  # lazy import — keeps the rest of the app usable without the key
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        raise EnvironmentError(
+            "ANTHROPIC_API_KEY is not set. "
+            "Export it with: export ANTHROPIC_API_KEY=sk-..."
+        )
+
+    # ── retrieve context from ChromaDB ──────────────────────────────────────
+    col = get_collection()
+    where = _build_where(wing, room)
+
+    kwargs = dict(
+        query_texts=[question],
+        n_results=n_context,
+        include=["metadatas", "documents", "distances"],
+    )
+    if where:
+        kwargs["where"] = where
+
+    results = col.query(**kwargs)
+
+    context_chunks = []
+    for doc, meta, dist in zip(
+        results["documents"][0],
+        results["metadatas"][0],
+        results["distances"][0],
+    ):
+        similarity = max(0, 1 - dist / 2)
+        wing_label = meta.get("wing", "?")
+        room_label = meta.get("room", "?")
+        source = meta.get("source_file", "")
+        header = f"[wing={wing_label} room={room_label} score={similarity:.2f}"
+        if source:
+            header += f" source={Path(source).name}"
+        header += "]"
+        context_chunks.append(f"{header}\n{doc}")
+
+    context_text = "\n\n---\n\n".join(context_chunks) if context_chunks else "(no context found)"
+
+    # ── build prompt and call Claude ─────────────────────────────────────────
+    system_prompt = textwrap.dedent("""\
+        You are an assistant for a personal Memory Palace knowledge base stored in ChromaDB.
+        The user will provide retrieved context chunks followed by a question.
+        Answer using only the provided context. If the context does not contain enough
+        information to answer confidently, say so clearly rather than guessing.
+        Be concise and direct.
+    """).strip()
+
+    user_message = f"Context from Memory Palace:\n\n{context_text}\n\n---\n\nQuestion: {question}"
+
+    client = anthropic.Anthropic()
+    response = client.messages.create(
+        model=model,
+        max_tokens=2048,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_message}],
+    )
+
+    return response.content[0].text
+
+
+def cmd_ask(args):
+    """Ask a question using RAG — retrieves context from ChromaDB, then queries Claude."""
+    question = " ".join(args.question)
+    try:
+        answer = palace_ask(
+            question=question,
+            wing=args.wing,
+            room=args.room,
+            n_context=args.n,
+            model=args.model,
+        )
+    except EnvironmentError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"\n{'─' * 80}")
+    print(f"  Q: {question}")
+    print(f"{'─' * 80}\n")
+    print(answer)
+    print()
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -389,6 +481,8 @@ def main():
               python app.py add-file ./my_script.py -r general
               python app.py stats
               python app.py export -w claude_vnstock -o backup.json
+              python app.py ask "What does the data warehouse room contain?"
+              python app.py ask -w claude_vnstock -r general -n 8 "How is VCB stock analyzed?"
         """),
     )
     sub = parser.add_subparsers(dest="command", help="Available commands")
@@ -437,6 +531,14 @@ def main():
     p_export.add_argument("-r", "--room", help="Filter by room")
     p_export.add_argument("-o", "--output", default="palace_export.json", help="Output file")
 
+    # ask
+    p_ask = sub.add_parser("ask", help="Ask a question (RAG with LLM)")
+    p_ask.add_argument("question", nargs="+", help="Your question")
+    p_ask.add_argument("-w", "--wing", help="Filter by wing")
+    p_ask.add_argument("-r", "--room", help="Filter by room")
+    p_ask.add_argument("-n", type=int, default=6, help="Number of context chunks (default: 6)")
+    p_ask.add_argument("-m", "--model", default="claude-sonnet-4-20250514", help="Claude model")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -452,6 +554,7 @@ def main():
         "delete": cmd_delete,
         "stats": cmd_stats,
         "export": cmd_export,
+        "ask": cmd_ask,
     }
 
     commands[args.command](args)
