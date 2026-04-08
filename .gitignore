@@ -1,0 +1,4 @@
+*.lock
+*.tmp
+chroma.sqlite3-wal
+chroma.sqlite3-shm
