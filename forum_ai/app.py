@@ -12,7 +12,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 # Load .env from the forum_ai directory (not cwd)
-load_dotenv(Path(__file__).parent / ".env")
+load_dotenv(Path(__file__).parent / ".env", override=True)
 
 import streamlit as st
 
