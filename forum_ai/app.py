@@ -11,7 +11,8 @@ import queue
 from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv()
+# Load .env from the forum_ai directory (not cwd)
+load_dotenv(Path(__file__).parent / ".env")
 
 import streamlit as st
 
@@ -48,6 +49,11 @@ ROUND_LABELS = {0: "Opening", 1: "Debate", 2: "Rebuttal", 3: "Closing"}
 
 def get_color(name: str) -> str:
     return AGENT_COLORS.get(name, "#9ca3af")
+
+
+def escape_dollars(text: str) -> str:
+    """Escape $ signs so Streamlit doesn't render them as LaTeX."""
+    return text.replace("$", "&#36;")
 
 
 # ── Session state init ───────────────────────────────────────────────────────
@@ -237,7 +243,7 @@ if start_btn and topic:
                     f'background-color: rgba(0,0,0,0.02);">'
                     f'<strong style="color: {color};">{agent.name}</strong> '
                     f'<span style="color: #999; font-size: 0.85em;">· {round_label} · Turn {turn + 1}</span>'
-                    f'<br><br>{response}</div>',
+                    f'<br><br>{escape_dollars(response)}</div>',
                     unsafe_allow_html=True,
                 )
 
@@ -273,7 +279,7 @@ if st.session_state.messages and not start_btn:
             f'background-color: rgba(0,0,0,0.02);">'
             f'<strong style="color: {color};">{msg["name"]}</strong> '
             f'<span style="color: #999; font-size: 0.85em;">· {msg["round_label"]} · Turn {msg["turn"]}</span>'
-            f'<br><br>{msg["content"]}</div>',
+            f'<br><br>{escape_dollars(msg["content"])}</div>',
             unsafe_allow_html=True,
         )
 
@@ -283,7 +289,7 @@ if st.session_state.messages and not start_btn:
 if st.session_state.synthesis:
     st.divider()
     st.subheader("📋 Forum Synthesis")
-    st.markdown(st.session_state.synthesis)
+    st.markdown(escape_dollars(st.session_state.synthesis))
 
 
 # ── Download transcript ──────────────────────────────────────────────────────
