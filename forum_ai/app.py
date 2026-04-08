@@ -24,6 +24,7 @@ from core.base_agent import BaseAgent
 from agents.groq_agent import GroqAgent
 from agents.gemini_agent import GeminiAgent
 from agents.mistral_agent import MistralAgent
+from agents.deepseek_agent import DeepSeekAgent
 
 # ── Page config ──────────────────────────────────────────────────────────────
 
@@ -85,10 +86,11 @@ with st.sidebar:
     use_llama = st.checkbox("Llama3 (Groq)", value=True)
     use_gemini = st.checkbox("Gemini (Google)", value=True)
     use_mistral = st.checkbox("Mistral", value=True)
+    use_deepseek = st.checkbox("DeepSeek", value=False)
 
     st.divider()
     env_status = []
-    for key in ["GROQ_API_KEY", "GOOGLE_API_KEY", "MISTRAL_API_KEY"]:
+    for key in ["GROQ_API_KEY", "GOOGLE_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY"]:
         val = os.environ.get(key, "")
         status = "✅" if val else "❌"
         st.text(f"{status} {key}")
@@ -123,6 +125,8 @@ def build_agents():
         agents.append(GeminiAgent())
     if use_mistral:
         agents.append(MistralAgent())
+    if use_deepseek:
+        agents.append(DeepSeekAgent())
     return agents
 
 

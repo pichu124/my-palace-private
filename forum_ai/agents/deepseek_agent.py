@@ -21,12 +21,15 @@ class DeepSeekAgent(BaseAgent):
             base_url="https://api.deepseek.com/v1",
         )
 
-    def respond(self, history: ConversationHistory, topic: str) -> str:
+    def respond(self, history: ConversationHistory, topic: str, round_prompt: str = "") -> str:
         messages = [
             {"role": "system", "content": self.build_system_prompt(DEFAULT_CONFIG.topic_framing)},
         ]
         messages += history.format_for_openai(DEFAULT_CONFIG.max_context_messages)
-        messages.append({"role": "user", "content": "Please share your perspective on the discussion so far."})
+        messages.append({
+            "role": "user",
+            "content": self.build_turn_instruction(topic, round_prompt),
+        })
 
         response = self._client.chat.completions.create(
             model=self.model,
