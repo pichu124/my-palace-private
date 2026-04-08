@@ -2,4 +2,11 @@
 *.tmp
 chroma.sqlite3-wal
 chroma.sqlite3-shm
+
+# API keys - NEVER commit
+.env
+.env.*
+*.env
+**/.env
+
 __pycache__/
