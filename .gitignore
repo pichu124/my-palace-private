@@ -2,3 +2,4 @@
 *.tmp
 chroma.sqlite3-wal
 chroma.sqlite3-shm
+__pycache__/
