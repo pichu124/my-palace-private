@@ -11,3 +11,5 @@ chroma.sqlite3-shm
 __pycache__/
 
 *.zip
+
+forum_ai/
