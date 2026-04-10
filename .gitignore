@@ -13,3 +13,5 @@ __pycache__/
 *.zip
 
 forum_ai/
+
+chroma.sqlite3
