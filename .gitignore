@@ -9,3 +9,5 @@ chroma.sqlite3-shm
 *.env
 **/.env
 __pycache__/
+
+*.zip
