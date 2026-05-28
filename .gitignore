@@ -1,17 +1,22 @@
-*.lock
-*.tmp
+﻿# ── ChromaDB binaries — synced via Dropbox, not git ───────────────
+chroma.sqlite3
 chroma.sqlite3-wal
 chroma.sqlite3-shm
 
-# API keys - NEVER commit
+# UUID folders are Chroma collection HNSW index
+[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-*/
+
+# ── API keys / secrets ────────────────────────────────────────────
 .env
 .env.*
 *.env
 **/.env
+
+# ── System / misc ─────────────────────────────────────────────────
+*.lock
+*.tmp
 __pycache__/
-
 *.zip
-
 forum_ai/
-
-chroma.sqlite3
+.DS_Store
+Thumbs.db
